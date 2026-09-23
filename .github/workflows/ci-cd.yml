@@ -1,0 +1,94 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+  build:
+    name: Build & Smoke Test Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: canteen:ci
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+
+      - name: Run container for smoke test
+        run: |
+          docker run -d --name canteen-smoke -p 3000:3000 canteen:ci
+          sleep 4
+          curl -f http://localhost:3000/health
+          echo ""
+          echo "Smoke test passed."
+          docker stop canteen-smoke
+          docker rm canteen-smoke
+
+  deploy:
+    name: Deploy to Render
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}&ref=${{ github.sha }}" \
+            -H "Accept: application/json" \
+            -f
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+
+  verify:
+    name: Verify Live Deployment
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deploy to propagate
+        run: sleep 30
+      - name: Curl live site for commit sha
+        env:
+          LIVE_URL: ${{ secrets.LIVE_URL }}
+        run: |
+          if [ -z "$LIVE_URL" ]; then
+            echo "LIVE_URL secret not set; skipping verification."
+            exit 0
+          fi
+          EXPECTED="${GITHUB_SHA:0:7}"
+          echo "Looking for commit $EXPECTED in footer of $LIVE_URL"
+          curl -fsSL "$LIVE_URL" | grep -q "$EXPECTED" && echo "Verified: live site shows $EXPECTED"
