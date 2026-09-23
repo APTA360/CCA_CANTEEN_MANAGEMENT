@@ -52,10 +52,24 @@ jobs:
       - name: Run container for smoke test
         run: |
           docker run -d --name canteen-smoke -p 3000:3000 canteen:ci
-          sleep 4
-          curl -f http://localhost:3000/health
-          echo ""
-          echo "Smoke test passed."
+          set +e
+          OK=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 2
+            echo "--- smoke attempt $i"
+            curl -fsS http://localhost:3000/health && { OK=1; break; }
+          done
+          set -e
+          if [ "$OK" -eq 1 ]; then
+            echo ""
+            echo "Smoke test passed."
+          else
+            echo "Smoke test FAILED after 10 attempts."
+            docker logs canteen-smoke || true
+            docker stop canteen-smoke || true
+            docker rm canteen-smoke || true
+            exit 1
+          fi
           docker stop canteen-smoke
           docker rm canteen-smoke
 
