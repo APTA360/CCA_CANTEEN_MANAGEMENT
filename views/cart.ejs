@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Cart — CampusBites</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/menu" class="logo">
+      <span class="logo-mark">🍽️</span>
+      <span class="logo-text">Campus<span class="logo-accent">Bites</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/menu" class="nav-link">Menu</a>
+      <a href="/cart" class="nav-link active">
+        Cart
+        <% if (cartCount > 0) { %>
+          <span class="cart-badge"><%= cartCount %></span>
+        <% } %>
+      </a>
+      <a href="/orders/history" class="nav-link">Orders</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container main">
+  <h1 class="page-title">Your Cart</h1>
+
+  <% if (cart.length === 0) { %>
+    <div class="empty-state big">
+      <div class="empty-emoji">🛒</div>
+      <h3>Your cart is feeling lonely</h3>
+      <p>Looks like our canteen favourites are still waiting for you. Go on, treat yourself — we won't tell the diet.</p>
+      <a href="/menu" class="btn-primary">Browse the Menu 🍴</a>
+    </div>
+  <% } else { %>
+    <div class="cart-layout">
+      <div class="cart-items">
+        <% cart.forEach(function(item) { %>
+          <div class="cart-row card" data-item-id="<%= escapeHtml(item.id) %>">
+            <img class="cart-thumb" src="<%= escapeHtml(item.image) %>" alt="<%= escapeHtml(item.name) %>" />
+            <div class="cart-item-main">
+              <div class="cart-item-head">
+                <div>
+                  <div class="cart-title-row">
+                    <h3 class="cart-name"><%= escapeHtml(item.name) %></h3>
+                    <span class="veg-badge small <%= item.isVeg ? 'veg' : 'non-veg' %>" title="<%= item.isVeg ? 'Vegetarian' : 'Non-vegetarian' %>">
+                      <span class="veg-dot"></span>
+                    </span>
+                  </div>
+                  <div class="cart-unit">₹<%= item.price %> each</div>
+                </div>
+                <form method="POST" action="/cart/remove" class="cart-remove-form">
+                  <input type="hidden" name="itemId" value="<%= escapeHtml(item.id) %>" />
+                  <button type="submit" class="link-danger" aria-label="Remove item">Remove</button>
+                </form>
+              </div>
+              <div class="cart-item-foot">
+                <div class="stepper inline-stepper" data-item-id="<%= escapeHtml(item.id) %>">
+                  <button type="button" class="step-btn minus" aria-label="Decrease">−</button>
+                  <span class="step-count"><%= item.qty %></span>
+                  <button type="button" class="step-btn plus" aria-label="Increase">+</button>
+                </div>
+                <div class="line-total">₹<span class="line-total-val"><%= item.price * item.qty %></span></div>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+
+        <div class="serving-mode card">
+          <h3 class="card-h">Serving preference</h3>
+          <div class="radio-row">
+            <label class="radio-label">
+              <input type="radio" name="servingMode" value="together" <%- servingMode === 'together' ? 'checked' : '' %> />
+              <span>
+                <strong>Serve all items together</strong>
+                <span class="radio-hint">Wait and collect everything at once.</span>
+              </span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="servingMode" value="individual" <%- servingMode === 'individual' ? 'checked' : '' %> />
+              <span>
+                <strong>Serve items as they're ready</strong>
+                <span class="radio-hint">Pick up each dish as soon as it's done.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <aside class="order-summary card sticky-summary">
+        <h3 class="card-h">Order Summary</h3>
+        <div class="sum-row"><span>Subtotal</span><span>₹<span id="subtotal"><%= subtotal %></span></span></div>
+        <div class="sum-row subtle"><span>Taxes &amp; fees</span><span>Included</span></div>
+        <div class="sum-row total"><span>Grand Total</span><span>₹<span id="grandTotal"><%= total %></span></span></div>
+        <a href="/checkout" class="btn-primary btn-block">Proceed to Checkout →</a>
+        <a href="/menu" class="link-muted">← Continue browsing menu</a>
+      </aside>
+    </div>
+
+    <div class="mobile-checkout-bar" id="mobileCheckoutBar">
+      <div>
+        <div class="mc-total">₹<span id="mcTotal"><%= total %></span></div>
+        <div class="mc-hint"><%= cart.reduce(function(s,i){return s+i.qty},0) %> item(s)</div>
+      </div>
+      <a href="/checkout" class="btn-primary">Checkout</a>
+    </div>
+  <% } %>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span class="commit-hash">commit: <%= commitSha %></span>
+  </div>
+</footer>
+
+<% if (cart.length > 0) { %>
+<script>
+(function () {
+  const rows = document.querySelectorAll('.cart-row');
+  function recalc() {
+    let sub = 0;
+    rows.forEach(function (row) {
+      const id = row.dataset.itemId;
+      const count = parseInt(row.querySelector('.step-count').textContent, 10);
+      const price = <%= JSON.stringify(cart.reduce(function(m,i){m[i.id]=i.price;return m},{})) %>[id] || 0;
+      row.querySelector('.line-total-val').textContent = price * count;
+      sub += price * count;
+    });
+    document.getElementById('subtotal').textContent = sub;
+    document.getElementById('grandTotal').textContent = sub;
+    document.getElementById('mcTotal').textContent = sub;
+  }
+
+  function updateCart(id, qty) {
+    return fetch('/cart/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId: id, qty: qty }),
+    }).then(function (r) {
+      if (!r.ok) throw new Error('Request failed');
+      return r.json();
+    });
+  }
+
+  function saveServing(val) {
+    fetch('/cart/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId: '__noop__', qty: 0 }),
+    }).catch(function () {});
+    try { sessionStorage.setItem('servingMode', val); } catch (_) {}
+  }
+
+  rows.forEach(function (row) {
+    const id = row.dataset.itemId;
+    const minus = row.querySelector('.minus');
+    const plus = row.querySelector('.plus');
+    const countEl = row.querySelector('.step-count');
+    minus.addEventListener('click', function () {
+      let n = parseInt(countEl.textContent, 10);
+      if (n <= 1) {
+        row.querySelector('.cart-remove-form').submit();
+        return;
+      }
+      n--; countEl.textContent = n;
+      updateCart(id, n).then(recalc);
+    });
+    plus.addEventListener('click', function () {
+      let n = parseInt(countEl.textContent, 10);
+      n++; countEl.textContent = n;
+      updateCart(id, n).then(recalc);
+    });
+  });
+
+  document.querySelectorAll('input[name="servingMode"]').forEach(function (r) {
+    r.addEventListener('change', function () { saveServing(r.value); });
+  });
+})();
+</script>
+<% } %>
+
+</body>
+</html>

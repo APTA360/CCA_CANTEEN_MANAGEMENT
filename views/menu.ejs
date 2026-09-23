@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Campus Canteen — Menu</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/menu" class="logo">
+      <span class="logo-mark">🍽️</span>
+      <span class="logo-text">Campus<span class="logo-accent">Bites</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/menu" class="nav-link <%- currentPath === '/menu' || currentPath === '/' ? 'active' : '' %>">Menu</a>
+      <a href="/cart" class="nav-link <%- currentPath === '/cart' ? 'active' : '' %>">
+        Cart
+        <% if (cartCount > 0) { %>
+          <span class="cart-badge"><%= cartCount %></span>
+        <% } %>
+      </a>
+      <a href="/orders/history" class="nav-link <%- currentPath === '/orders/history' ? 'active' : '' %>">Orders</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container main">
+  <section class="hero">
+    <h1>Fresh food, fast.</h1>
+    <p class="hero-sub">Order from your college canteen — skip the line, grab a token.</p>
+  </section>
+
+  <div class="search-bar">
+    <input type="search" id="searchInput" placeholder="Search for dishes, snacks, drinks…" />
+  </div>
+
+  <div class="category-chips" id="categoryChips">
+    <% categories.forEach(function(cat) { %>
+      <button class="chip <%- cat === 'All' ? 'active' : '' %>" data-category="<%= escapeHtml(cat) %>">
+        <%= escapeHtml(cat) %>
+      </button>
+    <% }); %>
+  </div>
+
+  <div class="menu-grid" id="menuGrid">
+    <% menu.forEach(function(item) { %>
+      <article class="food-card" 
+               data-category="<%= escapeHtml(item.category) %>"
+               data-name="<%= escapeHtml(item.name.toLowerCase()) %>"
+               data-id="<%= escapeHtml(item.id) %>">
+        <div class="card-media">
+          <img src="<%= escapeHtml(item.image) %>" alt="<%= escapeHtml(item.name) %>" loading="lazy" />
+          <div class="card-badge prep"><%= escapeHtml(item.prepTime) %></div>
+          <% if (!item.available) { %>
+            <div class="sold-out-overlay">
+              <span>Sold out</span>
+            </div>
+          <% } %>
+        </div>
+        <div class="card-body">
+          <div class="card-title-row">
+            <h3 class="card-title"><%= escapeHtml(item.name) %></h3>
+            <span class="veg-badge <%= item.isVeg ? 'veg' : 'non-veg' %>" title="<%= item.isVeg ? 'Vegetarian' : 'Non-vegetarian' %>">
+              <span class="veg-dot"></span>
+            </span>
+          </div>
+          <div class="card-meta">
+            <span class="rating-chip">4.<%= Math.floor(Math.random() * 5) + 3 %></span>
+            <span class="meta-sep">·</span>
+            <span class="cat-tag"><%= escapeHtml(item.category) %></span>
+          </div>
+          <div class="card-bottom">
+            <div class="price">₹<%= item.price %></div>
+            <div class="card-actions">
+              <div class="stepper" data-item-id="<%= escapeHtml(item.id) %>">
+                <button type="button" class="step-btn minus" aria-label="Decrease">−</button>
+                <span class="step-count">0</span>
+                <button type="button" class="step-btn plus" aria-label="Increase">+</button>
+              </div>
+              <button type="button" 
+                      class="btn-primary add-to-cart" 
+                      data-item-id="<%= escapeHtml(item.id) %>"
+                      <%= !item.available ? 'disabled' : '' %>>
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    <% }); %>
+  </div>
+
+  <div class="empty-state" id="emptySearch" hidden>
+    <div class="empty-emoji">🔍</div>
+    <h3>No dishes match that search</h3>
+    <p>Hmm, we couldn't find what you're looking for. Try a different keyword or clear the search.</p>
+    <button class="btn-secondary" id="clearSearchBtn">Clear search</button>
+  </div>
+</main>
+
+<% if (cartCount > 0) { %>
+  <div class="sticky-cart-bar" id="stickyCartBar">
+    <div class="container sticky-cart-inner">
+      <div class="sticky-cart-info">
+        <strong id="stickyCartCount"><%= cartCount %></strong>
+        <span>item<%= cartCount !== 1 ? 's' : '' %> in cart</span>
+      </div>
+      <a href="/cart" class="btn-primary">View Cart →</a>
+    </div>
+  </div>
+<% } else { %>
+  <div class="sticky-cart-bar" id="stickyCartBar" hidden>
+    <div class="container sticky-cart-inner">
+      <div class="sticky-cart-info">
+        <strong id="stickyCartCount">0</strong>
+        <span>items in cart</span>
+      </div>
+      <a href="/cart" class="btn-primary">View Cart →</a>
+    </div>
+  </div>
+<% } %>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span class="commit-hash">commit: <%= commitSha %></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const chips = document.querySelectorAll('#categoryChips .chip');
+  const cards = document.querySelectorAll('.food-card');
+  const searchInput = document.getElementById('searchInput');
+  const emptyEl = document.getElementById('emptySearch');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  let activeCat = 'All';
+  let searchTerm = '';
+
+  function applyFilters() {
+    let visible = 0;
+    const term = searchTerm.trim().toLowerCase();
+    cards.forEach(function (card) {
+      const cat = card.dataset.category;
+      const name = card.dataset.name;
+      const catOk = activeCat === 'All' || cat === activeCat;
+      const searchOk = !term || name.includes(term);
+      const show = catOk && searchOk;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    emptyEl.hidden = visible > 0;
+  }
+
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      chips.forEach(function (c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      activeCat = chip.dataset.category;
+      applyFilters();
+    });
+  });
+
+  searchInput.addEventListener('input', function (e) {
+    searchTerm = e.target.value;
+    applyFilters();
+  });
+
+  clearBtn && clearBtn.addEventListener('click', function () {
+    searchInput.value = '';
+    searchTerm = '';
+    applyFilters();
+  });
+
+  function getStepper(id) {
+    return document.querySelector('.stepper[data-item-id="' + id + '"]');
+  }
+  function setStepperCount(id, n) {
+    const s = getStepper(id);
+    if (!s) return;
+    s.querySelector('.step-count').textContent = n;
+  }
+
+  document.querySelectorAll('.stepper').forEach(function (s) {
+    const id = s.dataset.itemId;
+    const minus = s.querySelector('.minus');
+    const plus = s.querySelector('.plus');
+    const countEl = s.querySelector('.step-count');
+    minus.addEventListener('click', function () {
+      let n = parseInt(countEl.textContent, 10);
+      if (n > 0) { n--; countEl.textContent = n; }
+      if (n > 0) updateCart(id, n);
+      else removeFromCartUI(id);
+    });
+    plus.addEventListener('click', function () {
+      let n = parseInt(countEl.textContent, 10);
+      n++; countEl.textContent = n;
+      if (n === 1) addToCart(id, 1);
+      else updateCart(id, n);
+    });
+  });
+
+  document.querySelectorAll('.add-to-cart').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const id = btn.dataset.itemId;
+      const s = getStepper(id);
+      const cur = s ? parseInt(s.querySelector('.step-count').textContent, 10) : 0;
+      if (cur === 0) {
+        setStepperCount(id, 1);
+        addToCart(id, 1);
+      } else {
+        setStepperCount(id, cur + 1);
+        updateCart(id, cur + 1);
+      }
+    });
+  });
+
+  function updateBadgeCount(n) {
+    const sticky = document.getElementById('stickyCartBar');
+    document.querySelectorAll('.cart-badge').forEach(function (b) { b.textContent = n; });
+    const cartBadges = document.querySelectorAll('.cart-badge');
+    cartBadges.forEach(function (b) { b.style.display = n > 0 ? '' : 'none'; });
+    document.getElementById('stickyCartCount').textContent = n;
+    if (sticky) sticky.hidden = n <= 0;
+  }
+
+  function fetchJSON(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || 'Request failed'); });
+      return r.json();
+    });
+  }
+
+  function addToCart(id, qty) {
+    fetchJSON('/cart/add', { itemId: id, qty: qty })
+      .then(function (d) { updateBadgeCount(d.cartCount); toast('Added to cart ✓'); })
+      .catch(function (e) { toast(e.message, true); });
+  }
+
+  function updateCart(id, qty) {
+    fetchJSON('/cart/update', { itemId: id, qty: qty })
+      .then(function (d) { updateBadgeCount(d.cartCount); })
+      .catch(function (e) { toast(e.message, true); });
+  }
+
+  function removeFromCartUI(id) {
+    updateCart(id, 0);
+  }
+
+  function toast(msg, isErr) {
+    let t = document.getElementById('toastEl');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toastEl';
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show', isErr ? 'err' : 'ok');
+    t.classList.remove(isErr ? 'ok' : 'err');
+    clearTimeout(t._t);
+    t._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+})();
+</script>
+
+</body>
+</html>
