@@ -12,7 +12,7 @@ four-stage order-tracking stepper with timestamps.
 
 ---
 
-## 🏗️ Tech Stack
+##  Tech Stack
 
 | Layer        | Choice |
 |--------------|--------|
