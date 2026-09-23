@@ -1,0 +1,23 @@
+{
+  "name": "canteen-management-system",
+  "version": "1.0.0",
+  "description": "A dynamic canteen management web application with menu browsing, cart, checkout, Stripe/cash payments, order tracking, and admin dashboard.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "stripe": "^16.8.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
