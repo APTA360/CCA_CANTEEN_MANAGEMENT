@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Token — CampusBites</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/menu" class="logo">
+      <span class="logo-mark">🍽️</span>
+      <span class="logo-text">Campus<span class="logo-accent">Bites</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/menu" class="nav-link">Menu</a>
+      <a href="/cart" class="nav-link">Cart</a>
+      <a href="/orders/history" class="nav-link active">Orders</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container main confirmation">
+  <div class="success-check">
+    <svg viewBox="0 0 52 52" class="check-svg"><circle cx="26" cy="26" r="25" fill="none"/><path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/></svg>
+  </div>
+  <h1 class="conf-title">Order placed! 🎉</h1>
+  <p class="conf-sub">Show this token at the canteen counter to collect your food.</p>
+
+  <div class="token-card card">
+    <div class="token-label">Your Order Token</div>
+    <div class="token-number"><%= escapeHtml(order.token) %></div>
+    <div class="token-meta">
+      <div><span>Name</span><strong><%= escapeHtml(order.customerName) %></strong></div>
+      <div><span>Roll #</span><strong><%= escapeHtml(order.rollNumber) %></strong></div>
+    </div>
+  </div>
+
+  <div class="card receipt-card">
+    <h3 class="card-h">Receipt</h3>
+    <div class="receipt-items">
+      <% order.items.forEach(function(item) { %>
+        <div class="mini-row">
+          <span class="mini-name">
+            <span class="veg-badge tiny <%= item.isVeg ? 'veg' : 'non-veg' %>"><span class="veg-dot"></span></span>
+            <%= escapeHtml(item.name) %> <span class="mini-qty">× <%= item.qty %></span>
+          </span>
+          <span class="mini-price">₹<%= item.price * item.qty %></span>
+        </div>
+      <% }); %>
+    </div>
+    <hr class="divider" />
+    <div class="sum-row"><span>Subtotal</span><span>₹<%= order.total %></span></div>
+    <div class="sum-row total"><span>Total</span><span>₹<%= order.total %></span></div>
+
+    <div class="payment-note">
+      <% if (order.paymentMethod === 'cash') { %>
+        <div class="pay-tag cash">💵 Pay at counter — <strong>₹<%= order.total %></strong></div>
+      <% } else { %>
+        <div class="pay-tag paid">✅ Paid online via card</div>
+      <% } %>
+    </div>
+
+    <div class="serving-note">
+      <strong>Serving:</strong>
+      <%= order.servingMode === 'individual' ? 'Serve items as ready' : 'Serve all items together' %>
+    </div>
+  </div>
+
+  <div class="conf-actions">
+    <a href="/orders/<%= order.id %>" class="btn-primary">Track Order →</a>
+    <a href="/menu" class="btn-secondary">Order more</a>
+    <a href="/orders/history" class="link-muted">View all orders</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span class="commit-hash">commit: <%= commitSha %></span>
+  </div>
+</footer>
+
+</body>
+</html>

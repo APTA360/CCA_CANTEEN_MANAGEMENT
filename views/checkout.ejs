@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Checkout — CampusBites</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/menu" class="logo">
+      <span class="logo-mark">🍽️</span>
+      <span class="logo-text">Campus<span class="logo-accent">Bites</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/menu" class="nav-link">Menu</a>
+      <a href="/cart" class="nav-link">Cart</a>
+      <a href="/orders/history" class="nav-link">Orders</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container main">
+  <nav class="breadcrumb">
+    <a href="/menu">Menu</a> › <a href="/cart">Cart</a> › <span>Checkout</span>
+  </nav>
+  <h1 class="page-title">Checkout</h1>
+
+  <% if (cart.length === 0) { %>
+    <div class="empty-state big">
+      <div class="empty-emoji">🛒</div>
+      <h3>Your cart is empty</h3>
+      <p>Add some tasty items before checking out.</p>
+      <a href="/menu" class="btn-primary">Browse Menu</a>
+    </div>
+  <% } else { %>
+    <div class="checkout-layout">
+      <div class="checkout-main">
+        <form method="POST" action="/checkout" id="checkoutForm" class="card stack">
+          <h2 class="card-h">Your details</h2>
+          <div class="field">
+            <label for="customerName">Full name</label>
+            <input type="text" id="customerName" name="customerName" required placeholder="e.g. Aarav Sharma" value="<%= escapeHtml(user) %>" />
+          </div>
+          <div class="field">
+            <label for="rollNumber">Roll number</label>
+            <input type="text" id="rollNumber" name="rollNumber" required placeholder="e.g. 22BCA1042" value="<%= escapeHtml(rollNumber) %>" />
+          </div>
+
+          <h2 class="card-h">Serving preference</h2>
+          <div class="radio-row compact">
+            <label class="radio-label">
+              <input type="radio" name="servingMode" value="together" <%- servingMode === 'together' ? 'checked' : '' %> required />
+              <span>
+                <strong>Serve all items together</strong>
+              </span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="servingMode" value="individual" <%- servingMode === 'individual' ? 'checked' : '' %> />
+              <span>
+                <strong>Serve items as they're ready</strong>
+              </span>
+            </label>
+          </div>
+
+          <h2 class="card-h">Payment method</h2>
+          <div class="payment-picker">
+            <label class="payment-card">
+              <input type="radio" name="paymentMethod" value="cash" checked />
+              <span class="pay-emoji">💵</span>
+              <span class="pay-info">
+                <strong>Pay Cash at Counter</strong>
+                <span class="pay-hint">Pay when you collect your food.</span>
+              </span>
+            </label>
+            <label class="payment-card <%- !stripeEnabled ? 'disabled' : '' %>">
+              <input type="radio" name="paymentMethod" value="stripe" <%- !stripeEnabled ? 'disabled' : '' %> />
+              <span class="pay-emoji">💳</span>
+              <span class="pay-info">
+                <strong>Pay Online (Card)</strong>
+                <span class="pay-hint">
+                  <% if (stripeEnabled) { %>
+                    Secure checkout via Stripe.
+                  <% } else { %>
+                    Online payments unavailable — only cash mode active.
+                  <% } %>
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div class="checkout-actions">
+            <a href="/cart" class="link-muted">← Back to Cart</a>
+            <button type="submit" class="btn-primary" id="placeOrderBtn">Place Order →</button>
+          </div>
+        </form>
+      </div>
+
+      <aside class="order-summary card sticky-summary">
+        <h3 class="card-h">Your order</h3>
+        <% cart.forEach(function(item) { %>
+          <div class="mini-row">
+            <span class="mini-name">
+              <span class="veg-badge tiny <%= item.isVeg ? 'veg' : 'non-veg' %>"><span class="veg-dot"></span></span>
+              <%= escapeHtml(item.name) %> <span class="mini-qty">× <%= item.qty %></span>
+            </span>
+            <span class="mini-price">₹<%= item.price * item.qty %></span>
+          </div>
+        <% }); %>
+        <hr class="divider" />
+        <div class="sum-row"><span>Subtotal</span><span>₹<%= subtotal %></span></div>
+        <div class="sum-row subtle"><span>Taxes &amp; fees</span><span>Included</span></div>
+        <div class="sum-row total"><span>Total</span><span>₹<%= total %></span></div>
+      </aside>
+    </div>
+  <% } %>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span class="commit-hash">commit: <%= commitSha %></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const form = document.getElementById('checkoutForm');
+  if (!form) return;
+  form.addEventListener('submit', function (e) {
+    const method = form.querySelector('input[name="paymentMethod"]:checked');
+    if (!method) { e.preventDefault(); return; }
+    const btn = document.getElementById('placeOrderBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Placing order…'; }
+    if (method.value === 'stripe') {
+      e.preventDefault();
+      const fd = new FormData(form);
+      fetch('/checkout/stripe-session?method=create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(fd).toString(),
+      }).then(function (r) {
+        if (r.redirected) { window.location.href = r.url; }
+        else return r.text().then(function (t) { alert(t || 'Failed to start payment.'); btn && (btn.disabled = false, btn.textContent = 'Place Order →'); });
+      }).catch(function () {
+        if (btn) { btn.disabled = false; btn.textContent = 'Place Order →'; }
+        alert('Network error. Please try again.');
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>
