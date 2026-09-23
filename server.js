@@ -1,0 +1,11 @@
+const { app } = require("./app");
+
+const PORT = process.env.PORT || 3000;
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Canteen Management System running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { PORT };
