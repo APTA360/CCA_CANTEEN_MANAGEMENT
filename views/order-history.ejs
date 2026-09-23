@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order History — CampusBites</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/menu" class="logo">
+      <span class="logo-mark">🍽️</span>
+      <span class="logo-text">Campus<span class="logo-accent">Bites</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/menu" class="nav-link">Menu</a>
+      <a href="/cart" class="nav-link">Cart</a>
+      <a href="/orders/history" class="nav-link active">Orders</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container main">
+  <h1 class="page-title">Your Orders</h1>
+
+  <div class="filter-chips" id="filterChips">
+    <button class="chip active" data-filter="today">Today</button>
+    <button class="chip" data-filter="week">This week</button>
+    <button class="chip" data-filter="month">This month</button>
+    <button class="chip" data-filter="all">All time</button>
+  </div>
+
+  <% if (orders.length === 0) { %>
+    <div class="empty-state big">
+      <div class="empty-emoji">📋</div>
+      <h3>No orders yet</h3>
+      <p>Your order history lives here once you place an order. The canteen's waiting — go treat yourself!</p>
+      <a href="/menu" class="btn-primary">Start your first order →</a>
+    </div>
+  <% } else { %>
+    <div class="order-list" id="orderList">
+      <% orders.forEach(function(order) { %>
+        <a href="/orders/<%= order.id %>" class="order-card card" data-date="<%= order.createdAt %>">
+          <div class="order-card-head">
+            <div>
+              <div class="order-token-sm">#<%= escapeHtml(order.token) %></div>
+              <div class="order-date"><%= new Date(order.createdAt).toLocaleString() %></div>
+            </div>
+            <div class="status-chip status-<%= order.status.toLowerCase() %>"><%= order.status %></div>
+          </div>
+          <details class="order-items-details">
+            <summary><%= order.items.length %> item(s) · ₹<%= order.total %> ·
+              <%= order.paymentMethod === 'cash' ? '💵 Cash' : '💳 Card' %>
+              <% if (order.paymentMethod === 'cash') { %>
+                <span class="pay-chip small <%= order.paymentStatus === 'paid' ? 'paid' : 'pending' %>"><%= order.paymentStatus === 'paid' ? 'Paid' : 'Pending' %></span>
+              <% } %>
+            </summary>
+            <ul class="order-items-ul">
+              <% order.items.forEach(function(item) { %>
+                <li>
+                  <span class="veg-badge tiny <%= item.isVeg ? 'veg' : 'non-veg' %>"><span class="veg-dot"></span></span>
+                  <%= escapeHtml(item.name) %> × <%= item.qty %>
+                  <span class="li-right">₹<%= item.price * item.qty %></span>
+                </li>
+              <% }); %>
+            </ul>
+          </details>
+          <div class="order-card-foot">
+            <span class="serving-tag"><%= order.servingMode === 'individual' ? '⏱️ Serve as ready' : '🍽️ Serve together' %></span>
+            <span class="link-primary">View →</span>
+          </div>
+        </a>
+      <% }); %>
+    </div>
+
+    <div class="empty-state" id="emptyFilter" hidden>
+      <div class="empty-emoji">🗓️</div>
+      <h3>No orders in this period</h3>
+      <p>Try widening your date filter, or check back after your next meal.</p>
+    </div>
+  <% } %>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span class="commit-hash">commit: <%= commitSha %></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const chips = document.querySelectorAll('#filterChips .chip');
+  const cards = document.querySelectorAll('.order-card');
+  const empty = document.getElementById('emptyFilter');
+  if (!chips.length) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const week = new Date(today); week.setDate(week.getDate() - 7);
+  const month = new Date(today); month.setDate(1);
+
+  function filter(key) {
+    let vis = 0;
+    cards.forEach(function (c) {
+      const d = new Date(c.dataset.date);
+      let ok = true;
+      if (key === 'today') ok = d >= today;
+      else if (key === 'week') ok = d >= week;
+      else if (key === 'month') ok = d >= month;
+      c.style.display = ok ? '' : 'none';
+      if (ok) vis++;
+    });
+    if (empty) empty.hidden = vis > 0;
+  }
+
+  chips.forEach(function (ch) {
+    ch.addEventListener('click', function () {
+      chips.forEach(function (c) { c.classList.remove('active'); });
+      ch.classList.add('active');
+      filter(ch.dataset.filter);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

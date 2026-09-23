@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Orders Dashboard</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/menu" class="logo">
+      <span class="logo-mark">🍽️</span>
+      <span class="logo-text">Campus<span class="logo-accent">Bites</span> <span class="logo-admin">· Admin</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="/menu" class="nav-link">Menu</a>
+      <a href="/admin/orders" class="nav-link active">Orders</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container main">
+  <div class="admin-head">
+    <div>
+      <h1 class="page-title">All Orders</h1>
+      <p class="muted"><%= orders.length %> order(s) · newest first</p>
+    </div>
+    <div class="summary-bar">
+      <% const pendingCount = orders.filter(function(o){return o.status === 'Pending'}).length; %>
+      <% const prepCount = orders.filter(function(o){return o.status === 'Preparing'}).length; %>
+      <% const readyCount = orders.filter(function(o){return o.status === 'Ready'}).length; %>
+      <span class="sum-chip pending">Pending <%= pendingCount %></span>
+      <span class="sum-chip prepping">Preparing <%= prepCount %></span>
+      <span class="sum-chip ready">Ready <%= readyCount %></span>
+    </div>
+  </div>
+
+  <% if (orders.length === 0) { %>
+    <div class="empty-state big">
+      <div class="empty-emoji">🧑‍🍳</div>
+      <h3>No orders yet</h3>
+      <p>New orders will appear here as students check out.</p>
+    </div>
+  <% } else { %>
+    <div class="admin-order-list">
+      <% orders.forEach(function(order) { %>
+        <div class="admin-order-card card">
+          <div class="admin-order-head">
+            <div>
+              <div class="order-token-sm">#<%= escapeHtml(order.token) %></div>
+              <div class="order-date"><%= new Date(order.createdAt).toLocaleString() %></div>
+              <div class="cust-row">
+                <strong><%= escapeHtml(order.customerName) %></strong>
+                <span class="muted">· <%= escapeHtml(order.rollNumber) %></span>
+              </div>
+            </div>
+            <div class="status-chip status-<%= order.status.toLowerCase() %>"><%= order.status %></div>
+          </div>
+
+          <table class="items-table">
+            <thead><tr><th>Item</th><th>Qty</th><th class="right">Price</th></tr></thead>
+            <tbody>
+              <% order.items.forEach(function(item) { %>
+                <tr>
+                  <td>
+                    <span class="veg-badge tiny <%= item.isVeg ? 'veg' : 'non-veg' %>"><span class="veg-dot"></span></span>
+                    <%= escapeHtml(item.name) %>
+                  </td>
+                  <td>× <%= item.qty %></td>
+                  <td class="right">₹<%= item.price * item.qty %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+            <tfoot>
+              <tr><th colspan="2" class="right">Total</th><th class="right">₹<%= order.total %></th></tr>
+            </tfoot>
+          </table>
+
+          <div class="admin-meta-row">
+            <div class="pay-wrap">
+              <% if (order.paymentMethod === 'cash') { %>
+                <span class="pay-chip big <%= order.paymentStatus === 'paid' ? 'paid' : 'pending' %>">
+                  💵 Cash: <%= order.paymentStatus === 'paid' ? 'Paid' : 'Pending' %>
+                </span>
+                <% if (order.paymentStatus !== 'paid') { %>
+                  <form method="POST" action="/admin/orders/<%= order.id %>/mark-paid" class="inline-form">
+                    <button type="submit" class="btn-success">Mark paid</button>
+                  </form>
+                <% } %>
+              <% } else { %>
+                <span class="pay-chip big paid">💳 Card: Paid</span>
+              <% } %>
+            </div>
+            <div class="serving-chip">
+              <%= order.servingMode === 'individual' ? '⏱️ Serve as ready' : '🍽️ Serve together' %>
+            </div>
+          </div>
+
+          <form method="POST" action="/admin/orders/<%= order.id %>/status" class="status-form">
+            <label>Advance status:</label>
+            <select name="status" required>
+              <% const curIdx = statuses.indexOf(order.status); %>
+              <% statuses.forEach(function(st, idx) { %>
+                <option value="<%= st %>" <%- idx < curIdx ? 'disabled' : '' %> <%- st === order.status ? 'selected' : '' %>>
+                  <%= idx < curIdx ? '✓ ' : '' %><%= st %>
+                </option>
+              <% }); %>
+            </select>
+            <button type="submit" class="btn-primary small">Update</button>
+          </form>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span class="commit-hash">commit: <%= commitSha %></span>
+  </div>
+</footer>
+
+</body>
+</html>
