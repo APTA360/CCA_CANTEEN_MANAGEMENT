@@ -36,13 +36,13 @@ test("arithmetic sanity check (always passes)", () => {
   assert.equal(2 + 2, 4);
 });
 
-test("GET /health returns 200 and status ok", async () => {
+test("GET /health returns 200 and status ok (DELIBERATE FAILURE)", async () => {
   const ctx = await startServer();
   try {
     const { statusCode, body } = await request(ctx.base, "/health");
     assert.equal(statusCode, 200, "/health must respond 200");
     const json = JSON.parse(body);
-    assert.equal(json.status, "ok", "health.status must be 'ok'");
+    assert.equal(json.status, "BROKEN_ON_PURPOSE", "health.status must be 'BROKEN_ON_PURPOSE' — DEMO INTENTIONAL FAILURE");
     assert.ok(typeof json.commit === "string" && json.commit.length > 0, "commit must be a non-empty string");
   } finally {
     ctx.server.close();
