@@ -10,8 +10,8 @@
 <header class="site-header">
   <div class="container header-inner">
     <a href="/menu" class="logo">
-      <span class="logo-mark">🍽️</span>
-      <span class="logo-text">Campus<span class="logo-accent">Bites</span> <span class="logo-admin">· Admin</span></span>
+      <img src="<%= brand.logo %>" alt="<%= brand.name %>" class="logo-img" />
+      <span class="logo-text">Prit Da <span class="logo-accent">Dhaba</span> <span class="logo-admin">· Admin</span></span>
     </a>
     <nav class="site-nav">
       <a href="/menu" class="nav-link">Menu</a>
@@ -117,7 +117,7 @@
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span>© <%= new Date().getFullYear() %> <%= brand.name %></span>
     <span class="commit-hash">commit: <%= commitSha %></span>
   </div>
 </footer>
