@@ -8,6 +8,8 @@ export default [
       ecmaVersion: 2022,
       sourceType: "commonjs",
       globals: {
+        Atomics: "readonly",
+        SharedArrayBuffer: "readonly",
         process: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
@@ -20,10 +22,17 @@ export default [
         setInterval: "readonly",
         clearTimeout: "readonly",
         clearInterval: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        TextDecoder: "readonly",
+        TextEncoder: "readonly",
       },
     },
     rules: {
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
       "no-console": "off",
     },
   },

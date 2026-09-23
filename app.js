@@ -288,7 +288,7 @@ let stripeClient = null;
 if (process.env.STRIPE_SECRET_KEY) {
   try {
     stripeClient = require("stripe")(process.env.STRIPE_SECRET_KEY);
-  } catch (_err) {
+  } catch {
     stripeClient = null;
   }
 }
