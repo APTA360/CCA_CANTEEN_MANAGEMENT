@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Campus Canteen — Menu</title>
+<title><%= brand.name %> — Menu</title>
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <header class="site-header">
   <div class="container header-inner">
     <a href="/menu" class="logo">
-      <span class="logo-mark">🍽️</span>
-      <span class="logo-text">Campus<span class="logo-accent">Bites</span></span>
+      <img src="<%= brand.logo %>" alt="<%= brand.name %>" class="logo-img" />
+      <span class="logo-text">Prit Da <span class="logo-accent">Dhaba</span></span>
     </a>
     <nav class="site-nav">
       <a href="/menu" class="nav-link <%- currentPath === '/menu' || currentPath === '/' ? 'active' : '' %>">Menu</a>
@@ -27,16 +27,16 @@
 </header>
 
 <main class="container main">
-  <section class="hero">
-    <h1>Fresh food, fast.</h1>
-    <p class="hero-sub">Order from your college canteen — skip the line, grab a token.</p>
+  <section class="hero scroll-reveal">
+    <h1><%= brand.tagline %></h1>
+    <p class="hero-sub">Order from Prit Da Dhaba — skip the line, grab a token.</p>
   </section>
 
-  <div class="search-bar">
+  <div class="search-bar scroll-reveal">
     <input type="search" id="searchInput" placeholder="Search for dishes, snacks, drinks…" />
   </div>
 
-  <div class="category-chips" id="categoryChips">
+  <div class="category-chips scroll-reveal" id="categoryChips">
     <% categories.forEach(function(cat) { %>
       <button class="chip <%- cat === 'All' ? 'active' : '' %>" data-category="<%= escapeHtml(cat) %>">
         <%= escapeHtml(cat) %>
@@ -45,11 +45,14 @@
   </div>
 
   <div class="menu-grid" id="menuGrid">
-    <% menu.forEach(function(item) { %>
-      <article class="food-card" 
+    <% menu.forEach(function(item, idx) { %>
+      <article class="food-card scroll-reveal"
+               style="--reveal-delay: <%= (idx % 6) * 60 %>ms"
                data-category="<%= escapeHtml(item.category) %>"
                data-name="<%= escapeHtml(item.name.toLowerCase()) %>"
-               data-id="<%= escapeHtml(item.id) %>">
+               data-id="<%= escapeHtml(item.id) %>"
+               data-nutrition='<%= JSON.stringify(item.nutrition) %>'
+               data-ingredients='<%= JSON.stringify(item.ingredients) %>'>
         <div class="card-media">
           <img src="<%= escapeHtml(item.image) %>" alt="<%= escapeHtml(item.name) %>" loading="lazy" />
           <div class="card-badge prep"><%= escapeHtml(item.prepTime) %></div>
@@ -79,8 +82,8 @@
                 <span class="step-count">0</span>
                 <button type="button" class="step-btn plus" aria-label="Increase">+</button>
               </div>
-              <button type="button" 
-                      class="btn-primary add-to-cart" 
+              <button type="button"
+                      class="btn-primary add-to-cart"
                       data-item-id="<%= escapeHtml(item.id) %>"
                       <%= !item.available ? 'disabled' : '' %>>
                 Add
@@ -92,7 +95,7 @@
     <% }); %>
   </div>
 
-  <div class="empty-state" id="emptySearch" hidden>
+  <div class="empty-state scroll-reveal" id="emptySearch" hidden>
     <div class="empty-emoji">🔍</div>
     <h3>No dishes match that search</h3>
     <p>Hmm, we couldn't find what you're looking for. Try a different keyword or clear the search.</p>
@@ -122,9 +125,33 @@
   </div>
 <% } %>
 
+<div class="nutri-popup" id="nutriPopup" hidden>
+  <div class="nutri-popup-arrow"></div>
+  <div class="nutri-popup-inner">
+    <h4 class="nutri-name" id="nutriName"></h4>
+    <div class="nutri-calories-row">
+      <span class="nutri-cal-badge">🔥 <span id="nutriCalories">0</span> kcal</span>
+    </div>
+    <div class="nutri-grid">
+      <div class="nutri-stat"><span class="nutri-label">Protein</span><span class="nutri-val" id="nutriProtein">0g</span></div>
+      <div class="nutri-stat"><span class="nutri-label">Carbs</span><span class="nutri-val" id="nutriCarbs">0g</span></div>
+      <div class="nutri-stat"><span class="nutri-label">Fat</span><span class="nutri-val" id="nutriFat">0g</span></div>
+      <div class="nutri-stat"><span class="nutri-label">Fiber</span><span class="nutri-val" id="nutriFiber">0g</span></div>
+    </div>
+    <div class="nutri-section">
+      <h5>Ingredients</h5>
+      <ul class="nutri-ingredients" id="nutriIngredients"></ul>
+    </div>
+    <div class="nutri-allergens" id="nutriAllergensWrap" hidden>
+      <h5>⚠️ Allergens</h5>
+      <div class="nutri-allergen-tags" id="nutriAllergens"></div>
+    </div>
+  </div>
+</div>
+
 <footer class="site-footer">
   <div class="container footer-inner">
-    <span>© <%= new Date().getFullYear() %> CampusBites Canteen</span>
+    <span>© <%= new Date().getFullYear() %> <%= brand.name %></span>
     <span class="commit-hash">commit: <%= commitSha %></span>
   </div>
 </footer>
@@ -266,6 +293,122 @@
     t.classList.remove(isErr ? 'ok' : 'err');
     clearTimeout(t._t);
     t._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+
+  const popup = document.getElementById('nutriPopup');
+  const nutriName = document.getElementById('nutriName');
+  const nutriCalories = document.getElementById('nutriCalories');
+  const nutriProtein = document.getElementById('nutriProtein');
+  const nutriCarbs = document.getElementById('nutriCarbs');
+  const nutriFat = document.getElementById('nutriFat');
+  const nutriFiber = document.getElementById('nutriFiber');
+  const nutriIngredients = document.getElementById('nutriIngredients');
+  const nutriAllergensWrap = document.getElementById('nutriAllergensWrap');
+  const nutriAllergens = document.getElementById('nutriAllergens');
+  let hideTimer = null;
+
+  function showPopup(card) {
+    const name = card.querySelector('.card-title').textContent;
+    const nut = JSON.parse(card.dataset.nutrition || '{}');
+    const ing = JSON.parse(card.dataset.ingredients || '[]');
+
+    nutriName.textContent = name;
+    nutriCalories.textContent = nut.calories || 0;
+    nutriProtein.textContent = (nut.protein || 0) + 'g';
+    nutriCarbs.textContent = (nut.carbs || 0) + 'g';
+    nutriFat.textContent = (nut.fat || 0) + 'g';
+    nutriFiber.textContent = (nut.fiber || 0) + 'g';
+
+    nutriIngredients.innerHTML = '';
+    ing.forEach(function (i) {
+      const li = document.createElement('li');
+      li.textContent = i;
+      nutriIngredients.appendChild(li);
+    });
+
+    nutriAllergens.innerHTML = '';
+    const allergens = nut.allergens || [];
+    if (allergens.length > 0) {
+      allergens.forEach(function (a) {
+        const tag = document.createElement('span');
+        tag.className = 'nutri-allergen-tag';
+        tag.textContent = a;
+        nutriAllergens.appendChild(tag);
+      });
+      nutriAllergensWrap.hidden = false;
+    } else {
+      nutriAllergensWrap.hidden = true;
+    }
+
+    const rect = card.getBoundingClientRect();
+    const viewW = window.innerWidth;
+    const popupW = 320;
+    let left = rect.left + rect.width / 2 - popupW / 2 + window.scrollX;
+    let top = rect.bottom + 14 + window.scrollY;
+    let arrowAlign = 'center';
+
+    if (left + popupW > viewW + window.scrollX - 16) {
+      left = viewW + window.scrollX - popupW - 16;
+      arrowAlign = 'right';
+    }
+    if (left < window.scrollX + 16) {
+      left = window.scrollX + 16;
+      arrowAlign = 'left';
+    }
+
+    if (rect.bottom + 200 > window.innerHeight) {
+      top = rect.top + window.scrollY - 14;
+      popup.classList.add('popup-above');
+    } else {
+      popup.classList.remove('popup-above');
+    }
+
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+
+    const arrow = popup.querySelector('.nutri-popup-arrow');
+    if (arrowAlign === 'left') arrow.style.left = (rect.left - left + rect.width / 2) + 'px';
+    else if (arrowAlign === 'right') arrow.style.left = (rect.left - left + rect.width / 2) + 'px';
+    else arrow.style.left = '';
+
+    popup.hidden = false;
+    popup.classList.remove('popup-zoom-out');
+    popup.classList.add('popup-zoom-in');
+  }
+
+  function hidePopup() {
+    popup.classList.remove('popup-zoom-in');
+    popup.classList.add('popup-zoom-out');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function () {
+      popup.hidden = true;
+    }, 160);
+  }
+
+  cards.forEach(function (card) {
+    if (card.querySelector('.sold-out-overlay')) return;
+    card.addEventListener('mouseenter', function () {
+      clearTimeout(hideTimer);
+      showPopup(card);
+    });
+    card.addEventListener('mouseleave', function () {
+      hidePopup();
+    });
+  });
+
+  const revealEls = document.querySelectorAll('.scroll-reveal');
+  if ('IntersectionObserver' in window) {
+    const obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (ent) {
+        if (ent.isIntersecting) {
+          ent.target.classList.add('revealed');
+          obs.unobserve(ent.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    revealEls.forEach(function (el) { obs.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add('revealed'); });
   }
 })();
 </script>
