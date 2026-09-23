@@ -1,4 +1,4 @@
-const test = require("node:test");
+﻿const test = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const { app } = require("../app");
@@ -70,7 +70,7 @@ test("GET /health returns status ok and commit sha", async () => {
   const { res, body } = await request(ctx.base, "/health");
   assert.equal(res.statusCode, 200, "/health should respond with 200");
   const data = JSON.parse(body);
-  assert.equal(data.status, "ok", "status must be 'ok'");
+  assert.equal(data.status, "PURPOSELY_BROKEN_FOR_CI_FAILURE_DEMO", "status must be ok");
   assert.ok(
     typeof data.commit === "string" && data.commit.length > 0,
     "commit must be a non-empty string"
